@@ -1,0 +1,200 @@
+openapi: "3.0.3"
+
+info:
+  version: 0.0.1
+  title: Gatekeeper API
+  license:
+    name: MIT
+paths:
+  /people:
+
+    get:
+      summary: List all people in system
+      operationId: listPeople
+      tags:
+        - People
+      responses:
+        '200':
+          description: Hit the endpoint, returns all people in database
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PersonDataRes'
+                example:
+                  - id: 61140a823465340020000635
+                    name_first: Billy
+                    name_last: Costigan
+                    created_at: 1626166326
+                    updated_at: 1626166326
+                    status: valid
+                    details:
+                      address: partial match
+                      address_risk: low
+                      identification: match
+                      date_of_birth: match
+                      ofac: no match
+                      pep: no match
+                  - id: 60ed54366565390026000005
+                    name_first: Frank
+                    name_last: Costello
+                    created_at: 1626113376
+                    updated_at: 1626113376
+                    status: invalid
+                    details:
+                      address: match
+                      address_risk: high
+                      identification: match
+                      date_of_birth: match
+                      ofac: no match
+                      pep: match
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+              example:
+                error: Cannot fetch data
+                message: Something has gone wrong
+            
+    post:
+      summary: Add new person, run search and respond with basic report.
+      tags:
+        - People
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/Person"
+          
+      responses:
+        '201':
+          description: Lists personal data and possible flags from watchlists they appear on
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonDataRes'
+              example:
+                id: 611419af33646600240006ee
+                name_first: Robert
+                name_last: Paulson
+                created_at: 1628703362
+                updated_at: 1628703362
+                status: valid
+                details:
+                  address: match
+                  address_risk: low
+                  identification: match
+                  date_of_birth: match
+                  ofac: no match
+                  pep: no match
+              
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+              example:
+                error: Invalid input for document_value 
+                message: Please select a valid item for identification ("ssn" or "drivers_license")
+        
+
+ 
+
+components:
+  schemas:
+    Person:
+      type: object
+      required:
+        - name_first
+        - name_last
+        - birthday # Birthday needs to be broken down into seperate day, month, and year parameters
+        - document_type # Document types can be: US: SSN or Drivers License. CA: Passport, ID Card, Drivers License. 
+        - document_value
+        - address_street1
+        - address_city
+        - address_subdivision # Subdivision of input country. Ex: 'State' for US
+        - address_postal_code
+        - address_country_code
+      properties:
+        id:
+          type: string
+        name_first:
+          type: string
+        name_middle:
+          type: string
+        name_last:
+          type: string
+        document_type:
+          type: string
+          description: Must be either SSN or Drivers License
+        document_value:
+          type: string
+        birthday:
+          type: string
+          description: MM/DD/YYYY
+        address_street1:
+          type: string
+        address_street2:
+          type: string
+        address_city:
+          type: string
+        address_subdivision:
+          type: string
+        address_postal_code:
+          type: string
+        address_country_code:
+          type: string
+        phone_number:
+          type: string
+        ip_address:
+          type: string
+        note:
+          type: string
+    
+    PersonDataRes:
+      type: object
+      required:
+        - id
+        - status
+        - details
+      properties:
+        id:
+          type: string
+        created_at:
+          type: string
+        updated_at:
+          type: string
+        status:
+          type: string
+          description: Assessment of whether person will be accepted or not
+        details:
+          type: object
+          properties:
+            address:
+              type: string
+            address_risk:
+              type: string
+            identification:
+              type: string
+            date_of_birth:
+              type: string
+            ofac:
+              type: string
+            pep:
+              type: string
+    
+    ErrorMessage:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+
+          
+  

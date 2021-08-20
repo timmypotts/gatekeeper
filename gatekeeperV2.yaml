@@ -1,0 +1,285 @@
+openapi: "3.0.3"
+
+servers:
+  - url: /getcoins
+
+info:
+  version: 0.1.1
+  title: Gatekeeper API
+  license:
+  # identifier required for 3.1.0
+    # identifier: gatekeeper
+    name: MIT
+
+# NOTE: I'm aware we shouldn't reference blockscore that much in documentation, this is just to explain my reasoning behind structures/routes/params
+
+tags:
+  - name: check
+    description: Quickly check if a person or digital currency address is involved with US imposed sanctions.
+  - name: verify
+    description: Verify that a user's information is valid.
+
+paths:
+
+  /check/name:
+    get:
+      tags:
+        - check
+      summary: Check if user has watchlist hits.
+      parameters:
+        - in: query
+          name: minscore
+          required: true
+          schema:
+            type: integer
+          description: Sets minimum score to define a match
+        - in: query
+          name: first_name
+          required: true
+          schema:
+            type: string
+          description: "Name to search CSL list for match. First and last name are required."
+        - in: query
+          name: middle_name
+          required: false
+          schema:
+            type: string
+          description: "Not required but will help return more accurate results."
+        - in: query
+          name: last_name
+          required: true
+          schema:
+            type: string
+          description: "Name to search CSL list for match."
+        - in: query
+          name: address
+          required: false
+          schema:
+            type: string
+          description: "Street address of person being searched"
+        - in: query
+          name: country
+          required: false
+          schema:
+            type: string
+          description: "Two letter country code to make search more specific"
+        - in: query
+          name: cached
+          required: false
+          schema:
+            type: boolean
+            default: idk
+          description: "Boolean to denote whether to bypass cache or not. May be omitted if unsure."
+        - in: query
+          name: getcoinsID
+          required: true
+          schema:
+            type: string
+          description: "Getcoins user id to relate to blockscore person id. This way, we don't need to ask blockscore for the ID and we can minimize calls to the service"
+  
+      responses:
+        "200":
+          description: "Search has been executed successfully, produces results of search"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckNameResponse"
+              example:
+                first_name: William
+                last_name: Costigan
+                score: 65
+                status: Valid
+                getcoinsID: 12345
+        "400":
+          description: "Request does not include required parameters, or includes non-existant ones"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                error: "Invalid request, please include getcoins user id"
+        "500":
+          description: "Something went wrong while processing the request"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                error: "Server could not process request at this time. Please try again later"
+
+
+
+  /check/digital-currency-address:
+    get:
+      tags:
+        - check
+      summary: Check if digital currency address is in CSL
+      parameters:
+        - in: query
+          name: doa
+          description: "Digital currency address"
+          required: true
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: "Search has been executed successfully, produces results of search"
+          content:
+              application/json:
+                schema:
+                  $ref: "#/components/schemas/CheckDigitalCurrencyAddressResponse"
+                example:
+                  digital_currency_address: 1AjZPMsnmpdK2Rv9KQNfMurTXinscVro9V
+                  status: valid
+
+  /verify/document:
+    post:
+      tags:
+        - verify
+      summary: | 
+        Verify user identity with blockscore. Blockscore already checks OFAC and PEP so we might as well
+        return those results every call to get our money's worth
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/VerifyUserRequestBody"
+      responses:
+        "200":
+          description: "Search has been executed successfully, produces results of search"
+          content:
+              application/json:
+                schema:
+                  $ref: "#/components/schemas/VerifyUserResponse"
+        "400":
+          description: "Request body does not include required parameters, or includes non-existant ones"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                error: "Invalid request, please include getcoins user id"
+        "500":
+          description: "Something went wrong while processing the request"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                error: "Server could not process request at this time. Please try again later"
+
+ 
+components:
+  schemas:
+
+    VerifyUserRequestBody:
+      type: object
+      required:
+        - name_first
+        - name_last
+        - birthday # Birthday needs to be broken down into seperate day, month, and year parameters
+        - document_type # Document types can be: US: SSN or Drivers License. CA: Passport, ID Card, Drivers License. 
+        - document_value
+        - address_street1
+        - address_city
+        - address_subdivision # Subdivision of input country. Ex: 'State' for US
+        - address_postal_code
+        - address_country_code
+      properties:
+        id:
+          type: string
+        name_first:
+          type: string
+        name_middle:
+          type: string
+        name_last:
+          type: string
+        document_type:
+          type: string
+          description: Must be either SSN or Drivers License
+        document_value:
+          type: string
+        birthday:
+          type: string
+          description: MM/DD/YYYY
+        address_street1:
+          type: string
+        address_street2:
+          type: string
+        address_city:
+          type: string
+        address_subdivision:
+          type: string
+        address_postal_code:
+          type: string
+        address_country_code:
+          type: string
+        phone_number:
+          type: string
+        ip_address:
+          type: string
+        note:
+          type: string
+    
+    VerifyUserResponse:
+      type: object
+      required:
+        - id
+        - status
+        - details
+      properties:
+        id:
+          type: string
+        created_at:
+          type: string
+        updated_at:
+          type: string
+        status:
+          type: string
+          description: Assessment of whether person will be accepted or not
+        details:
+          type: object
+          properties:
+            address:
+              type: string
+            address_risk:
+              type: string
+            identification:
+              type: string
+            date_of_birth:
+              type: string
+            ofac:
+              type: string
+            pep:
+              type: string
+
+
+    CheckDigitalCurrencyAddressResponse:
+      type: object
+      properties:
+        digital_currency_address:
+          type: string
+        status:
+          type: string
+
+    CheckNameResponse:
+      type: object
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        score:
+          type: integer
+        status:
+          type: string
+        getcoinsID:   # Just a suggestion, but I figured if the client needs to do anything with this information -- having the getcoins userid would help
+          type: integer
+
+    ErrorMessage:
+      type: object
+      properties:
+        error:
+          type: string
+
