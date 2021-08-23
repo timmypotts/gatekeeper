@@ -120,7 +120,7 @@ paths:
           description: "Digital currency address"
           required: true
           schema:
-            type: boolean
+            type: string
       responses:
         "200":
           description: "Search has been executed successfully, produces results of search"
@@ -131,6 +131,62 @@ paths:
                 example:
                   digital_currency_address: 1AjZPMsnmpdK2Rv9KQNfMurTXinscVro9V
                   status: valid
+        "400":
+          description: "Request does not include required parameters, or includes non-existant ones"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                error: "Invalid request, please include getcoins user id"
+        "500":
+          description: "Something went wrong while processing the request"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                error: "Server could not process request at this time. Please try again later"
+
+  /check/document:
+    get:
+      tags:
+        - check
+      summary: "Retuns all 'person' objects from blockscore corresponding to a given getcoinsID"
+      parameters:
+        - in: query
+          name: getcoinsID
+          description: "Getcoins user ID"
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: "Returns results of successful search"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#components/schemas/CheckDocumentResponse"
+        "400":
+          description: "Request does not include required parameters, or includes non-existant ones"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                error: "Invalid request, please include getcoins user id"
+        "500":
+          description: "Something went wrong while processing the request"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                error: "Server could not process request at this time. Please try again later"
+
+
 
   /verify/document:
     post:
@@ -238,6 +294,39 @@ components:
         status:
           type: string
           description: Assessment of whether person will be accepted or not
+        details:
+          type: object
+          properties:
+            address:
+              type: string
+            address_risk:
+              type: string
+            identification:
+              type: string
+            date_of_birth:
+              type: string
+            ofac:
+              type: string
+            pep:
+              type: string
+
+    CheckDocumentResponse:
+      type: object
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        getcoinsID:
+          type: integer
+        document_type:
+          type: string
+        document_value:
+          type: string
+        status:
+          type: string
+        note:
+          type: string
         details:
           type: object
           properties:
